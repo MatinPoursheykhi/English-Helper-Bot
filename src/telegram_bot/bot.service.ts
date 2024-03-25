@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
-import { commandsMessage, BotStatus, NativeLangsArray, BotStatusArray } from "./constants/bot.constants";
+import { commandsMessage, BotMode, NativeLangsArray, BotModeArray } from "./constants/bot.constants";
 import { CommandHandlerJOB } from "./jobs/commandHandler.job";
 import { UsersService } from "src/models/users/users.service";
 import { BotVocabularyAPI } from "./api/botVocabulary.api";
@@ -19,7 +19,7 @@ require('dotenv').config()
 @Injectable()
 export class TelegramBotService implements OnModuleInit {
     private readonly bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-    public mode: BotStatus;
+    public mode: BotMode;
 
     constructor(
         private readonly usersService: UsersService,
@@ -33,7 +33,7 @@ export class TelegramBotService implements OnModuleInit {
         await this.bot.setMyCommands(Menu);
         
         // Listening to user's messages and manage most of the bot reactions ----------------------------------------------------------
-        await this.bot.on('message', async (msg: any): Promise<void> => {
+        this.bot.on('message', async (msg: any): Promise<void> => {
             const chatId = msg.chat.id;
             const text = msg.text;
             const is_command: Array<Object> | undefined = msg.entities;
@@ -68,7 +68,7 @@ export class TelegramBotService implements OnModuleInit {
         // COMMANDS ------------------------------------------------------------
 
         // create user if it's new --------------------
-        await this.bot.onText(/\/start/, async (msg: any) => {
+        this.bot.onText(/\/start/, async (msg: any) => {
             const chatId = msg.chat.id; 
             const { chat } = msg;
 
@@ -85,7 +85,7 @@ export class TelegramBotService implements OnModuleInit {
         });
 
         // set the user native lang--------------------
-        await this.bot.onText(/\/nativelang/, async (msg: any) => {
+        this.bot.onText(/\/nativelang/, async (msg: any) => {
             const chatId = msg.chat.id;
             
             try {
@@ -100,14 +100,15 @@ export class TelegramBotService implements OnModuleInit {
         });
 
         // show bot's skills -----------------------------------
-        await this.bot.onText(/\/options/, async (msg: any) => {
+        this.bot.onText(/\/options/, async (msg: any) => {
             const chatId = msg.chat.id;
 
             try {
                 const user_exist = await this.usersService.findUser(chatId);
                 if(!user_exist)
                     return await this.bot.sendMessage(chatId, commandsMessage.notStarted());
-                else if (!user_exist.nativeLang)
+                
+                if (!user_exist.nativeLang)
                     return await this.bot.sendMessage(chatId, commandsMessage.notSetNativeLang());
 
                 await this.bot.sendMessage(chatId, commandsMessage.skillOptions(), skillOptions);
@@ -117,7 +118,7 @@ export class TelegramBotService implements OnModuleInit {
         });
 
         // show bot's mode -----------------------------------
-        await this.bot.onText(/\/showmode/, async (msg: any) => {
+        this.bot.onText(/\/showmode/, async (msg: any) => {
             const chatId = msg.chat.id;
 
             try {
@@ -130,8 +131,8 @@ export class TelegramBotService implements OnModuleInit {
             }
         });
 
-        // get the response of inline_keyboard and set the bot's status ----------------------
-        await this.bot.on("callback_query", async (query: any): Promise<void> => {
+        // get the response of inline_keyboard and set the bot's status ----------------------------------
+        this.bot.on("callback_query", async (query: any): Promise<void> => {
             const chatId = query.message.chat.id;
             const message_id = query.message.message_id;
         try {
@@ -139,59 +140,40 @@ export class TelegramBotService implements OnModuleInit {
             await this.bot.deleteMessage(chatId, message_id);
             
             // check the type of query data from user
-            if(BotStatusArray.includes(query.data)){
-                this.mode = query.data;
-                // check the mode and send properiate message
-                if (this.mode === BotStatus.vocabulary_definition)
-                    await this.bot.sendMessage(chatId, commandsMessage.vocabularyMode());
-                else if (this.mode === BotStatus.text_to_speech)
-                    await this.bot.sendMessage(chatId, commandsMessage.textToSpeechMode());
-                else if (this.mode === BotStatus.translate_to_my_lang)
-                    await this.bot.sendMessage(chatId, commandsMessage.translateToMyLangMode());
-                else if (this.mode === BotStatus.translate_to_english)
-                    await this.bot.sendMessage(chatId, commandsMessage.translateToEnglishMode());
-            }
-            else if(NativeLangsArray.includes(query.data)){
-                const flat_existance_languages = query.message.reply_markup.inline_keyboard.flat(Infinity);
-                const user_choosen_lang_array = flat_existance_languages.filter((item: any)=> {
-                    if(item.callback_data === query.data) return item.text;
-                });
-                const user_lang: string = user_choosen_lang_array[0].text;
+            if(BotModeArray.includes(query.data))
+                this.setBotMode(chatId, query.data);
+            
+            else if(NativeLangsArray.includes(query.data))
+                await this.updateNativelang(chatId , query);
 
-                const updated = await this.usersService.updateuserLang(query);
-                if(updated)
-                    await this.bot.sendMessage(chatId, commandsMessage.langUpdated(user_lang));
-                else
-                    await this.bot.sendMessage(chatId, commandsMessage.langUpdateFailed());
-            }
         } catch (error) {
             console.log(error);
         }
         });
     }
 
-    // execute the logic code of each mode
-    async executeProperMode(text: string) {
+    // execute the logic code of each mode --------------------------------------------------------
+    async executeProperMode(text: string):Promise<string | boolean | VocabularyResponseStruct> {
         switch (this.mode) {
-            case BotStatus.vocabulary_definition: return await this.botVocabularyAPI.vocabulary(text);
-            case BotStatus.text_to_speech: return await this.botTextToSpeech.textToSpeech(text, eventEmitter);
+            case BotMode.vocabulary_definition: return await this.botVocabularyAPI.vocabulary(text);
+            case BotMode.text_to_speech: return await this.botTextToSpeech.textToSpeech(text, eventEmitter);
         }
     }
 
-    // spread the response to the proper mode handler
-    async modeSpreader(msg: any, response: any){
+    // spread the response to the proper mode handler --------------------------------------------------
+    async modeSpreader(msg: any, response: any):Promise<void> {
         switch (this.mode) {
-            case BotStatus.vocabulary_definition: return await this.vocabularyResponse(msg, response);
-            case BotStatus.text_to_speech: return await this.textToSpeechResponse(msg, response);
-            case BotStatus.translate_to_english: return await this.traslateToEnglishResponse(msg);
-            case BotStatus.translate_to_my_lang: return await this.traslateToMyLangResponse(msg);
+            case BotMode.vocabulary_definition: return await this.vocabularyResponse(msg, response);
+            case BotMode.text_to_speech: return await this.textToSpeechResponse(msg, response);
+            case BotMode.translate_to_english: return await this.traslateToEnglishResponse(msg);
+            case BotMode.translate_to_my_lang: return await this.traslateToMyLangResponse(msg);
         }
     }
 
-    // send response to text to speech mode
-    async textToSpeechResponse(msg: any, filePath: string){
+    // send response to text to speech mode ----------------------------------------------
+    async textToSpeechResponse(msg: any, filePath: string):Promise<void> {
         const chatId = msg.chat.id;
-        let is_emitted: boolean = true;
+        let is_emitted: boolean = true; // prevent repeating the emit
         
         try {
             if(filePath){
@@ -202,7 +184,7 @@ export class TelegramBotService implements OnModuleInit {
                     if(is_emitted){
                         await this.bot.sendAudio(chatId, filePath, {}, fileOptions);
 
-                        fs.unlink(filePath,()=>{});
+                        fs.unlink(filePath, ()=>{});
                         await this.bot.deleteMessage(chatId, (msg.message_id + 1));
                         is_emitted = false;
                     }
@@ -215,8 +197,8 @@ export class TelegramBotService implements OnModuleInit {
         }
     }
 
-    // send response to vocabulary mode
-    async vocabularyResponse(msg: any, responseText: VocabularyResponseStruct){
+    // send response to vocabulary mode -----------------------------------------------------
+    async vocabularyResponse(msg: any, responseText: VocabularyResponseStruct):Promise<void> {
         const chatId = msg.chat.id;
         
         try {
@@ -231,7 +213,8 @@ export class TelegramBotService implements OnModuleInit {
         }
     }
 
-    async traslateToEnglishResponse(msg: any) {
+    // ---------------------------------------------------
+    async traslateToEnglishResponse(msg: any):Promise<void> {
         const chatId = msg.chat.id;
         const userText = msg.text;
 
@@ -244,7 +227,8 @@ export class TelegramBotService implements OnModuleInit {
         }
     }
     
-    async traslateToMyLangResponse(msg: any) {
+    // --------------------------------------------------------
+    async traslateToMyLangResponse(msg: any):Promise<void> {
         const chatId = msg.chat.id;
         const userText = msg.text;
 
@@ -258,75 +242,42 @@ export class TelegramBotService implements OnModuleInit {
             console.log(error);
         }
     }
+
+    // check if bot mode is changing -------------------------------------
+    setBotMode(chatId: number, mode: BotMode):void {
+        this.mode = mode;
+
+        // check the mode and send properiate message
+        switch (this.mode) {
+            case BotMode.vocabulary_definition:
+                this.bot.sendMessage(chatId, commandsMessage.vocabularyMode());
+                break;
+            case BotMode.text_to_speech:
+                this.bot.sendMessage(chatId, commandsMessage.textToSpeechMode());
+                break;
+            case BotMode.translate_to_my_lang:
+                this.bot.sendMessage(chatId, commandsMessage.translateToMyLangMode());
+                break;
+            case BotMode.translate_to_english:
+                this.bot.sendMessage(chatId, commandsMessage.translateToEnglishMode());
+                break;
+        }
+    }
+
+    // update native language ------------------------------------
+    async updateNativelang(chatId: number, query: any){
+        // extract the native lang which user has sent
+        const flat_existance_languages = query.message.reply_markup.inline_keyboard.flat(Infinity);
+        const user_choosen_lang_array = flat_existance_languages.filter((item: any)=> {
+            if(item.callback_data === query.data) return item.text;
+        });
+        const user_lang: string = user_choosen_lang_array[0].text;
+
+        // update the native lang
+        const updated = await this.usersService.updateuserLang(query);
+        if(updated)
+            await this.bot.sendMessage(chatId, commandsMessage.langUpdated(user_lang));
+        else
+            await this.bot.sendMessage(chatId, commandsMessage.langUpdateFailed());
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // get user native language
-        // await this.bot.onText(/\/myLanguage/, async (text: any) => {
-        //     const chatId = msg.chat.id
-        //     // force reply
-        //     await this.bot.sendMessage(chatId, commandsMessage.myLanguage(), {
-        //         reply_markup: {
-        //             force_reply: true,
-        //         }
-        //     })
-        //     // lang options
-        //     await this.bot.sendMessage(chatId, commandsMessage.chooseOneLang(), {
-        //         reply_markup: {
-        //             keyboard: [...languages],
-        //             resize_keyboard: true, // make buttons smaller
-        //             one_time_keyboard: true, // will be shown just for the first time
-        //         }
-        //     })
-
-        // replys on users message
-        // await this.bot.onReplyToMessage(msg.chat.id, msg.message_id, (res: any) => {
-        //     console.log(res);
-        // })
-        // updateUser(msg)
-        // });
-
-        // Bot Buttons ------------------------------------------------------------------------------
-        // await this.bot.on("inline_query", async (msg: any) => {
-        //     console.log(msg);
-        //     // const message_id: number = msg.message_id
-        //     // await this.bot.deleteMessage(msg.chat_id, (message_id - 1)) // delete the message
-        //     // await this.bot.removeListener("message");
-        // });
-
-    // this.bot.onReplyToMessage(chatId, messageId, async (nameMsg) => {
-    //     const name = nameMsg.text;
-    //     // save name in DB if you want to ...
-    // })
-
-    //reply_to_message_id 
-    //this.bot.onText => the first param is our command and the second param is an arrow function that we can do respond to that command
-
-    // this.bot.channel_post => Received a new incoming channel post of any kind
-    // this.bot.edited_channel_post, edited_channel_post_text, edited_channel_post_caption => Received a new version of a channel post that is known to the bot and was edited
-
-    // this.bot.edited_message, edited_message_text, edited_message_caption => Received a new version of a message that is known to the bot and was edited
-    // check bot's this.mode and utilizing the fit function
-

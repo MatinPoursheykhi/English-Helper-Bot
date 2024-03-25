@@ -18,7 +18,7 @@ export class BotVocabularyAPI {
 
             // create the structure of response
             const responseText = await responseMaker(meanings, phonetics, vocabulary);
-            return responseText
+            return responseText;
         } catch (error) {
             return false;
         }
@@ -26,13 +26,13 @@ export class BotVocabularyAPI {
 }
 
 // create the structure of response
-async function responseMaker(meanings: any, phonetics: PhoneticsStruct | undefined, vocabulary: string) {
-    let responseText = `Vocabulary: "${vocabulary}" ${phonetics.text ? `\nphonetic:${phonetics.text}` : ''}\n`
+async function responseMaker(meanings: any, phonetics: PhoneticsStruct | undefined, vocabulary: string): Promise<VocabularyResponseStruct> {
+    let responseText = `Vocabulary: "${vocabulary}" ${phonetics.text ? `\nphonetic:${phonetics.text}` : ''}\n`;
 
     meanings.forEach((items: any) => {
 
         // randomly choose a definition and example of definitions array
-        const random = Math.floor(Math.random() * items.definitions.length)
+        const random = Math.floor(Math.random() * items.definitions.length);
 
         const part_of_speech = items.partOfSpeech
         const random_definition = items.definitions[random].definition

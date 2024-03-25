@@ -1,5 +1,5 @@
 export const commandsMessage = {
-    start: (username: string): string => `Hey ${username}!\nWelcome to English Helper Bot!\nPlease tap on /nativelang command to set your native language!`,
+    start: (username: string): string => `Hey ${username ? username : 'pal'}!\nWelcome to English Helper Bot!\nPlease tap on /nativelang command to set your native language!`,
     notStarted: (): string => `Please use /start first.`,
 
     setNativeLang: (): string => `Please choose your native language!`,
@@ -28,12 +28,12 @@ export const commandsMessage = {
 // existance commands
 export const commandCodes = ['/start', '/options', '/showmode', '/nativelang'];
 
-export const enum BotStatus {
+export const enum BotMode {
     vocabulary_definition = 'Vocabulary Definition',
     text_to_speech = 'Text To Speech',
     translate_to_my_lang = 'Translate To My Language',
     translate_to_english = 'Translate To English',
 }
 
-export const BotStatusArray = ['Vocabulary Definition', 'Text To Speech', 'Translate To English', 'Translate To My Language']
+export const BotModeArray = ['Vocabulary Definition', 'Text To Speech', 'Translate To English', 'Translate To My Language']
 export const NativeLangsArray = ['fa', 'fr', 'de', 'el', 'af', 'sq', 'zh-hk', 'ja', 'ko', 'ru', 'es', 'sv']

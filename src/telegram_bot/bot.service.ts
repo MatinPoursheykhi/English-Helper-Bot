@@ -177,7 +177,7 @@ export class TelegramBotService implements OnModuleInit {
         
         try {
             if(filePath){
-                const fileOptions = { filename: filePath, contentType: 'audio/mpeg' };
+                const fileOptions = { filename: filePath, contentType: 'application/octet-stream' };
                 await this.bot.sendMessage(chatId, 'Making the audio...');
 
                 eventEmitter.on('send', async ()=>{

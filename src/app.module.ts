@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
-import { internalAppModuleImports } from './app/internal-imports';
-require('dotenv').config() // use to access to .env file via process (just wotk where has been called)
+import { internalAppModuleImports } from './config/app/internal-imports';
+import { extarnalAppModuleImports } from './config/app/extarnal-imports';
 
 @Module({
   imports: [
+    ...extarnalAppModuleImports,
     ...internalAppModuleImports,
   ],
   controllers: [],
   providers: [],
+  exports:[],
 })
 export class AppModule { }

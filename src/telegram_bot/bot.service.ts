@@ -28,7 +28,7 @@ export class TelegramBotService implements OnModuleInit {
         private readonly botTextToSpeech: BotTextToSpeechJOB,
     ) { }
 
-    async onModuleInit() {
+    async onModuleInit() { // bot ID `@mateenLLbot`
         // MENU -------------------------------------------------------
         await this.bot.setMyCommands(Menu);
 

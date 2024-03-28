@@ -1,15 +1,20 @@
 export interface PhoneticsStruct {
-    text?: string,
-    audio?: string,
-    sourceUrl?: string,
-    license?: LicenseStruct,
+    text?: string;
+    audio?: string;
+    sourceUrl?: string;
+    license?: LicenseStruct;
 }
 type LicenseStruct = {
-    name: string,
-    url: string
+    name: string;
+    url: string;
 }
 
 export interface VocabularyResponseStruct {
-    responseText?: string,
-    audio?: string
+    responseText?: string;
+    audio?: string;
+}
+
+export interface FileOptions {
+    filename: string;
+    contentType: string;
 }

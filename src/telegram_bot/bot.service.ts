@@ -4,7 +4,7 @@ import { CommandHandlerJOB } from "./jobs/commandHandler.job";
 import { UsersService } from "src/models/users/users.service";
 import { BotVocabularyAPI } from "./api/botVocabulary.api";
 import { Menu, nativeLangs, skillOptions } from "./constants/keyboard.constant";
-import { VocabularyResponseStruct } from "./structs/bot.structs";
+import { FileOptions, VocabularyResponseStruct } from "./structs/bot.structs";
 import { BotTextToSpeechJOB } from "./jobs/botTextToVoice.job";
 import { translate } from '@vitalets/google-translate-api';
 import * as fs from 'fs'
@@ -34,12 +34,12 @@ export class TelegramBotService implements OnModuleInit {
 
         // Listening to user's messages and manage most of the bot reactions ----------------------------------------------------------
         this.bot.on('message', async (msg: any): Promise<void> => {
-            const chatId = msg.chat.id;
-            const text = msg.text;
+            const chatId: number = msg.chat.id;
+            const text: string = msg.text;
             const is_command: Array<Object> | undefined = msg.entities;
 
             try {
-                // if user have not click on /start -----------------------------------------
+                // if user have not clicked on /start -----------------------------------------
                 const user_exist = await this.usersService.findUser(chatId);
                 if (!user_exist && !is_command)
                     await this.bot.sendMessage(chatId, commandsMessage.notStarted());
@@ -69,7 +69,7 @@ export class TelegramBotService implements OnModuleInit {
 
         // create user if it's new --------------------
         this.bot.onText(/\/start/, async (msg: any) => {
-            const chatId = msg.chat.id;
+            const chatId: number = msg.chat.id;
             const { chat } = msg;
 
             try {
@@ -88,7 +88,7 @@ export class TelegramBotService implements OnModuleInit {
 
         // set the user native lang--------------------
         this.bot.onText(/\/nativelang/, async (msg: any) => {
-            const chatId = msg.chat.id;
+            const chatId: number = msg.chat.id;
 
             try {
                 const user_exist = await this.usersService.findUser(chatId);
@@ -105,7 +105,7 @@ export class TelegramBotService implements OnModuleInit {
 
         // show bot's skills -----------------------------------
         this.bot.onText(/\/options/, async (msg: any) => {
-            const chatId = msg.chat.id;
+            const chatId: number = msg.chat.id;
 
             try {
                 const user_exist = await this.usersService.findUser(chatId);
@@ -123,7 +123,7 @@ export class TelegramBotService implements OnModuleInit {
 
         // show bot's mode -----------------------------------
         this.bot.onText(/\/showmode/, async (msg: any) => {
-            const chatId = msg.chat.id;
+            const chatId: number = msg.chat.id;
 
             try {
                 const user_exist = await this.usersService.findUser(chatId);
@@ -137,8 +137,8 @@ export class TelegramBotService implements OnModuleInit {
 
         // get the response of inline_keyboard and set the bot's status ----------------------------------
         this.bot.on("callback_query", async (query: any): Promise<void> => {
-            const chatId = query.message.chat.id;
-            const message_id = query.message.message_id;
+            const chatId: number = query.message.chat.id;
+            const message_id: number = query.message.message_id;
             try {
                 // delete the previous message of bot
                 await this.bot.deleteMessage(chatId, message_id);
@@ -176,12 +176,12 @@ export class TelegramBotService implements OnModuleInit {
 
     // send response to text to speech mode ----------------------------------------------
     async textToSpeechResponse(msg: any, filePath: string): Promise<void> {
-        const chatId = msg.chat.id;
+        const chatId: number = msg.chat.id;
         let is_emitted: boolean = true; // prevent repeating the emit
 
         try {
             if (filePath) {
-                const fileOptions = { filename: filePath, contentType: 'application/octet-stream' };
+                const fileOptions: FileOptions = { filename: filePath, contentType: 'application/octet-stream' };
                 await this.bot.sendMessage(chatId, 'Making the audio...');
 
                 eventEmitter.on('send', async () => {
@@ -190,7 +190,8 @@ export class TelegramBotService implements OnModuleInit {
 
                         fs.unlink(filePath, () => { });
                         await this.bot.deleteMessage(chatId, (msg.message_id + 1));
-                        is_emitted = false;
+
+                        is_emitted = false; // to execute emit action just for one time
                     }
                 });
             }
@@ -203,7 +204,7 @@ export class TelegramBotService implements OnModuleInit {
 
     // send response to vocabulary mode -----------------------------------------------------
     async vocabularyResponse(msg: any, responseText: VocabularyResponseStruct): Promise<void> {
-        const chatId = msg.chat.id;
+        const chatId: number = msg.chat.id;
 
         try {
             if (responseText) {
@@ -219,8 +220,8 @@ export class TelegramBotService implements OnModuleInit {
 
     // ---------------------------------------------------
     async traslateToEnglishResponse(msg: any): Promise<void> {
-        const chatId = msg.chat.id;
-        const userText = msg.text;
+        const chatId: number = msg.chat.id;
+        const userText: string = msg.text;
 
         try {
             // translation
@@ -233,8 +234,8 @@ export class TelegramBotService implements OnModuleInit {
 
     // --------------------------------------------------------
     async traslateToMyLangResponse(msg: any): Promise<void> {
-        const chatId = msg.chat.id;
-        const userText = msg.text;
+        const chatId: number = msg.chat.id;
+        const userText: string = msg.text;
 
         try {
             const user = await this.usersService.findUser(chatId)
@@ -271,14 +272,14 @@ export class TelegramBotService implements OnModuleInit {
     // update native language ------------------------------------
     async updateNativelang(chatId: number, query: any) {
         // extract the native lang which user has sent
-        const flat_existance_languages = query.message.reply_markup.inline_keyboard.flat(Infinity);
-        const user_choosen_lang_array = flat_existance_languages.filter((item: any) => {
+        const flat_existance_languages: Array<any> = query.message.reply_markup.inline_keyboard.flat(Infinity);
+        const user_choosen_lang_array: Array<any> = flat_existance_languages.filter((item: any) => {
             if (item.callback_data === query.data) return item.text;
         });
         const user_lang: string = user_choosen_lang_array[0].text;
 
         // update the native lang
-        const updated = await this.usersService.updateuserLang(query);
+        const updated: boolean = await this.usersService.updateuserLang(query);
         if (updated)
             await this.bot.sendMessage(chatId, commandsMessage.langUpdated(user_lang));
         else

@@ -1,5 +1,5 @@
 export const commandsMessage = {
-    start: (username: string): string => `Hey ${username ? username : 'pal'}!\nWelcome to English Helper Bot!\nPlease tap on /nativelang command to set your native language!`,
+    start: (username: string): string => `Hey ${username ?? `pal`}!\nWelcome to English Helper Bot!\nPlease tap on /nativelang command to set your native language!`,
     notStarted: (): string => `Please use /start first.`,
 
     setNativeLang: (): string => `Please choose your native language!`,
@@ -15,10 +15,10 @@ export const commandsMessage = {
     undefinedWord: (): string => `Sorry pal, we couldn't find definitions for the word you were looking for.`,
 
     noMode: (): string => `Please select an option via /options!`,
-    botMode: (mode: string): string => `Bot mode is: ${mode ? mode : "nothing"}!`,
+    botMode: (mode: string): string => `Bot mode is: ${mode ?? `nothing`}!`,
 
-    textToSpeechMode: (): string => `Consideration:\nIn "Text To Speech" mode you can use a maximum of 44 word in each query!`,
-    isMaxVocabularies: (): string => `You have used more than 44 word!\nPlease send less.`,
+    textToSpeechMode: (): string => `Consideration:\nIn "Text To Speech" mode you can use a maximum of 44 words in each query!`,
+    isMaxVocabularies: (): string => `You have used more than 44 words!\nPlease send less.`,
 
     translateToMyLangMode: (): string => `Consideration:\nIn "Translate English To My Language" mode you can translate any vocabularies or sentences from English to your native language!`,
     translateToEnglishMode: (): string => `Consideration:\nIn "Translate My Language To English" mode you can translate any vocabularies or sentences from your native language to English!`,

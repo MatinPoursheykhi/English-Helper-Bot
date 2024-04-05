@@ -27,6 +27,8 @@
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 botID = @mateenLLbot
 
+*** do not forget to use VPN
+
 ## Installation
 
 ```bash
